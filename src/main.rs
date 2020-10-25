@@ -3,25 +3,26 @@ extern crate image;
 use image::{GrayImage, Luma};
 
 fn main() {
-    // let mut args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
 
-    // if args.len() != 2 {
+    println!("{:#?}", args);
 
-    // }
+    if args.len() != 3 {
+        println!("Wrong arguments.");
+        println!("Usage: ditherizer input.png output.png");
+        return;
+    }
 
-    // let filename = match args.pop() {
-    //     Some(filename) => filename,
-    //     None => panic!("Please add the filename as argument")
+    let input = &args[1];
+    let output = &args[2];
 
-    // };
-
-    let image = image::open("image.png").unwrap();
+    let image = image::open(input).unwrap();
 
     let mut grayscale = image.to_luma();
 
     ditherize(&mut grayscale);
 
-    grayscale.save("image2.png").unwrap();
+    grayscale.save(output).unwrap();
 }
 
 fn ditherize(data: &mut GrayImage) {
