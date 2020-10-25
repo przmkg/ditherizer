@@ -1,5 +1,3 @@
-#![feature(clamp)]
-
 extern crate image;
 
 use image::{GrayImage, Luma};
@@ -9,16 +7,17 @@ fn main() {
 
     let mut grayscale = image.to_luma();
 
-    let (width, height) = grayscale.dimensions();
 
-    let result = ditherize(&mut grayscale, width, height);
+    let result = ditherize(&mut grayscale);
 
     result.save("image2.png").unwrap();
 }
 
-fn ditherize(data: &mut GrayImage, width: u32, height: u32) -> GrayImage {
+fn ditherize(data: &mut GrayImage) -> GrayImage {
+    let (width, height) = data.dimensions();
     let mut result = data.clone();
-    for (x, y, _pixel) in data.enumerate_pixels_mut() {
+
+    for (x, y, _pixel) in data.enumerate_pixels() {
         if x > width - 1 || y > height - 1 {
             continue;
         }
@@ -60,8 +59,8 @@ fn find_closest_palette_color(old_pixel: &Luma<u8>) -> Luma<u8> {
     }
 }
 
-fn _convert_to_grayscale(data: &Vec<u8>) -> Vec<u8> {
+/*fn _convert_to_grayscale(data: &Vec<u8>) -> Vec<u8> {
     data.chunks(3)
         .map(|rgb| (0.299 * rgb[0] as f32 + 0.587 * rgb[1] as f32 + 0.114 * rgb[2] as f32) as u8)
         .collect::<Vec<u8>>()
-}
+}*/
