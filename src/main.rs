@@ -1,88 +1,66 @@
-use std::{fs::File, io::BufWriter, path::Path};
+#![feature(clamp)]
 
-extern crate png;
+extern crate image;
 
-const WIDTH: usize = 1174;
-const HEIGHT: usize = 866;
-const LINE_SIZE: usize = 3522;
+use image::{GrayImage, Luma};
 
 fn main() {
-    let (_reader, buf) = load_image();
+    let image = image::open("image.png").unwrap();
 
-    let path = Path::new(r"image2.png");
-    let file = File::create(path).unwrap();
-    let ref mut w = BufWriter::new(file);
+    let mut grayscale = image.to_luma();
 
-    let mut grayscale = convert_to_grayscale(&buf);
-    ditherize(&mut grayscale, WIDTH, HEIGHT, LINE_SIZE / 3);
+    let (width, height) = grayscale.dimensions();
 
-    let mut encoder = png::Encoder::new(w, WIDTH as u32, HEIGHT as u32);
-    encoder.set_color(png::ColorType::Grayscale);
-    encoder.set_depth(png::BitDepth::One);
-    let mut writer = encoder.write_header().unwrap();
+    let result = ditherize(&mut grayscale, width, height);
 
-    // writer.write_image_data(&grayscale[0..1015818]).unwrap();
-    writer.write_image_data(&grayscale).unwrap();
+    result.save("image2.png").unwrap();
 }
 
-fn load_image() -> (png::Reader<File>, Vec<u8>) {
-    let decoder = png::Decoder::new(File::open("image.png").unwrap());
-    let (info, mut reader) = decoder.read_info().unwrap();
-    println!("{:?}", info);
-
-    let mut buf = vec![0; info.buffer_size()];
-    reader.next_frame(&mut buf).unwrap();
-
-    println!("Size: {}", buf.len());
-    println!("Width: {}\tHeight: {}", info.width, info.height);
-
-    return (reader, buf);
-}
-
-fn ditherize(data: &mut Vec<u8>, width: usize, height: usize, line_size: usize) {
-    for y in 0..height - 1 {
-        for x in 0..width - 1 {
-            let pixel_pos = (y * line_size) + x;
-            let old_pixel = data[pixel_pos];
-            let new_pixel = find_closest_palette_color(old_pixel);
-            data[pixel_pos] = new_pixel;
-            let quant_error: i32 = old_pixel as i32 - new_pixel as i32;
-
-            let pixel1 = data[(y * line_size) + x + 1];
-            let pixel2 = data[((y + 1) * line_size) + x - 1];
-            let pixel3 = data[((y + 1) * line_size) + x];
-            let pixel4 = data[((y + 1) * line_size) + x + 1];
-
-            // println!("pixel1 {}\tpixel2 {}\tpixel3 {}\tpixel4 {}", pixel1, pixel2, pixel3, pixel4);
-
-            let new_pixel1 = (pixel1 as i32 + quant_error) * 7 / 16;
-            let new_pixel2 = (pixel2 as i32 + quant_error) * 3 / 16;
-            let new_pixel3 = (pixel3 as i32 + quant_error) * 5 / 16;
-            let new_pixel4 = (pixel4 as i32 + quant_error) / 16;
-
-            // println!("pixel1 {}\tpixel2 {}\tpixel3 {}\tpixel4 {}", new_pixel1, new_pixel2, new_pixel3, new_pixel4);
-
-            data[(y * line_size) + x + 1] = new_pixel1 as u8;
-            data[((y + 1) * line_size) + x - 1] = new_pixel2 as u8;
-            data[((y + 1) * line_size) + x] = new_pixel3 as u8;
-            data[((y + 1) * line_size) + x + 1] = new_pixel4 as u8;
-            // println!("x: {} y: {}", x, y);
-            // println!("pixel pos: {}", pixel_pos);
+fn ditherize(data: &mut GrayImage, width: u32, height: u32) -> GrayImage {
+    let mut result = data.clone();
+    for (x, y, _pixel) in data.enumerate_pixels_mut() {
+        if x > width - 1 || y > height - 1 {
+            continue;
         }
+            let old_pixel = result.get_pixel_mut(x, y).clone(); //pixel.clone();
+            let new_pixel = find_closest_palette_color(&old_pixel);
+            result.put_pixel(x, y, new_pixel);
+            let quant_error = old_pixel[0] as f32 - new_pixel[0] as f32;
+
+            if x < width - 2 {
+                let pixel1 = result.get_pixel_mut(x + 1, y).clone();
+                result.put_pixel(x + 1, y, image::Luma([(pixel1[0] as f32 + quant_error * 7. / 16.) as u8]));
+            }
+
+            if x != 0 && y < height - 2 {
+                let pixel2 = result.get_pixel_mut(x - 1, y + 1).clone();
+                result.put_pixel(x.saturating_sub(1), y + 1, image::Luma([(pixel2[0] as f32 + quant_error * 3. / 16.) as u8]));
+            }
+
+            if y < height - 2 {
+                let pixel3 = result.get_pixel_mut(x, y + 1).clone();
+                result.put_pixel(x, y + 1, image::Luma([(pixel3[0] as f32 + quant_error * 5. / 16.) as u8]));
+            }
+
+            if x < width - 2 && y < height - 2 {
+                let pixel4 = result.get_pixel_mut(x + 1, y + 1).clone();
+                result.put_pixel(x + 1, y + 1, image::Luma([(pixel4[0] as f32 + quant_error * 1. / 16.) as u8]));
+            }
     }
 
     println!("data size: {}", data.len());
+    return result;
 }
 
-fn find_closest_palette_color(old_pixel: u8) -> u8 {
-    if old_pixel > 122u8 {
-        255
+fn find_closest_palette_color(old_pixel: &Luma<u8>) -> Luma<u8> {
+    if old_pixel[0] > 122u8 {
+        image::Luma([255u8])
     } else {
-        0
+        image::Luma([0u8])
     }
 }
 
-fn convert_to_grayscale(data: &Vec<u8>) -> Vec<u8> {
+fn _convert_to_grayscale(data: &Vec<u8>) -> Vec<u8> {
     data.chunks(3)
         .map(|rgb| (0.299 * rgb[0] as f32 + 0.587 * rgb[1] as f32 + 0.114 * rgb[2] as f32) as u8)
         .collect::<Vec<u8>>()
