@@ -5,8 +5,6 @@ use image::{GrayImage, Luma};
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    println!("{:#?}", args);
-
     if args.len() != 3 {
         println!("Wrong arguments.");
         println!("Usage: ditherizer input.png output.png");
@@ -28,8 +26,8 @@ fn main() {
 fn ditherize(data: &mut GrayImage) {
     let (width, height) = data.dimensions();
 
-    for y in 0..height - 1 {
-        for x in 0..width - 1 {
+    for y in 0..height {
+        for x in 0..width {
             let old_pixel = data.get_pixel(x, y).clone(); //pixel.clone();
             let new_pixel = find_closest_palette_color(&old_pixel);
             data.put_pixel(x, y, new_pixel);
