@@ -37,22 +37,38 @@ fn ditherize(data: &mut GrayImage) {
 
             if x < width - 2 {
                 let pixel1 = data.get_pixel(x + 1, y).clone();
-                data.put_pixel(x + 1, y, image::Luma([(pixel1[0] as f32 + quant_error * 7. / 16.) as u8]));
+                data.put_pixel(
+                    x + 1,
+                    y,
+                    image::Luma([(pixel1[0] as f32 + quant_error * 7. / 16.) as u8]),
+                );
             }
 
             if x != 0 && y < height - 2 {
                 let pixel2 = data.get_pixel(x - 1, y + 1).clone();
-                data.put_pixel(x.saturating_sub(1), y + 1, image::Luma([(pixel2[0] as f32 + quant_error * 3. / 16.) as u8]));
+                data.put_pixel(
+                    x.saturating_sub(1),
+                    y + 1,
+                    image::Luma([(pixel2[0] as f32 + quant_error * 3. / 16.) as u8]),
+                );
             }
 
             if y < height - 2 {
                 let pixel3 = data.get_pixel(x, y + 1).clone();
-                data.put_pixel(x, y + 1, image::Luma([(pixel3[0] as f32 + quant_error * 5. / 16.) as u8]));
+                data.put_pixel(
+                    x,
+                    y + 1,
+                    image::Luma([(pixel3[0] as f32 + quant_error * 5. / 16.) as u8]),
+                );
             }
 
             if x < width - 2 && y < height - 2 {
                 let pixel4 = data.get_pixel(x + 1, y + 1).clone();
-                data.put_pixel(x + 1, y + 1, image::Luma([(pixel4[0] as f32 + quant_error * 1. / 16.) as u8]));
+                data.put_pixel(
+                    x + 1,
+                    y + 1,
+                    image::Luma([(pixel4[0] as f32 + quant_error * 1. / 16.) as u8]),
+                );
             }
         }
     }
